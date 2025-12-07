@@ -12,5 +12,7 @@ neofetch, gnome and genact
 
 looks best if you use gentoo
 
+best used with tty on start up
+
 edit the scripts to your liking
 
