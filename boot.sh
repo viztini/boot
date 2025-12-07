@@ -4,18 +4,6 @@ GREEN='\033[1;32m'
 MAGENTA='\033[1;35m'
 NC='\033[0m'
 
-function find_package_manager() {
-    if command -v apt &> /dev/null; then
-        echo "apt"
-    elif command -v dnf &> /dev/null; then
-        echo "dnf"
-    elif command -v pacman &> /dev/null; then
-        echo "pacman"
-    else
-        echo "none"
-    fi
-}
-
 function type_line() {
     local line_text="$1"
     local sleep_duration="${2:-1}"
@@ -26,12 +14,10 @@ function type_line() {
 
     if [[ "$line_text" == *... ]]; then
         local prefix="${line_text%...}" 
-        
         for (( i=0; i<${#prefix}; i++ )); do
             echo -n "${prefix:$i:1}"
             sleep $typing_speed
         done
-        
         for (( i=1; i<=3; i++ )); do
             echo -n "."
             sleep $dot_delay 
@@ -44,80 +30,48 @@ function type_line() {
         done
         echo 
     fi
-    
+
     sleep "$sleep_duration"
 }
 
-function show_system_status() {
-    echo -e "${MAGENTA}> INITIATING SYSTEM DIAGNOSTICS...${NC}"
-    echo -e "${MAGENTA}========================================"
-    echo -e "${GREEN}> UPTIME:${NC} $(uptime | awk -F'( |,|:)+' '{print $6,$7}')"
-    echo -e "${GREEN}> MEMORY USAGE:${NC}"
-    free -h | awk 'NR==2{print "\tTotal: "$2," Used: "$3," Free: "$4}'
-    echo -e "${GREEN}> DISK SPACE:${NC}"
-    df -h / | awk 'NR==2{print "\tTotal: "$2," Used: "$3," Avail: "$4}'
-    echo -e "${GREEN}> RUNNING PROCESSES:${NC} $(ps -e | wc -l)"
-    echo -e "${MAGENTA}========================================"
-    echo -e "${GREEN}> PRESS ANY KEY TO RETURN TO MENU...${NC}"
-    read -n 1
-}
+function print_menu_block() {
+    local MENU_WIDTH=42
+    local COLS=$(tput cols)
+    local PADDING=$(( (COLS - MENU_WIDTH) / 2 ))
 
-function package_menu() {
-    local pkg_mgr=$(find_package_manager)
-    
-    if [ "$pkg_mgr" == "none" ]; then
-        echo -e "${MAGENTA}> ERROR: NO SUPPORTED PACKAGE MANAGER FOUND!${NC}"
-        sleep 2
-        return
-    fi
-    
-    while true; do
-        clear 
-        echo -e "${MAGENTA}========================================"
-        echo -e "       ${GREEN}PACKAGE MANAGER (${pkg_mgr})${MAGENTA}"
-        echo -e "========================================"
-        echo -e "${MAGENTA}[1] ${GREEN}> FULL SYSTEM UPDATE"
-        echo -e "${MAGENTA}[2] ${GREEN}> INSTALL PACKAGE"
-        echo -e "${MAGENTA}[0] ${GREEN}> BACK TO MAIN MENU"
-        echo -e "${MAGENTA}========================================"
-        echo -ne "${GREEN}> PACKAGE OPTION >> ${MAGENTA}"
-        read pkg_choice
+    local RAW_MENU=(
+        "========================================"
+        "       AVAILABLE PROTOCOLS"
+        "========================================"
+        "[1] > BROWSE THE WEB (W3M)"
+        "[2] > CODE (VIM)"
+        "[3] > START GRAPHICAL INTERFACE (GUI)"
+        "[4] > SHUTDOWN (POWEROFF)"
+        "[5] > RESTART (REBOOT)"
+        "[6] > CONTINUE TO TERMINAL INTERFACE (TUI)"
+        "========================================"
+    )
 
-        case $pkg_choice in
-            1)
-                echo -e "${GREEN}> STARTING FULL SYSTEM UPDATE. PASSWORD REQUIRED.${NC}"
-                case $pkg_mgr in
-                    apt) sudo apt update && sudo apt upgrade -y ;;
-                    dnf) sudo dnf upgrade -y ;;
-                    pacman) sudo pacman -Syu --noconfirm ;;
-                esac
-                echo -e "${GREEN}> UPDATE COMPLETE. PRESS ANY KEY...${NC}"
-                read -n 1
-                ;;
-            2)
-                echo -ne "${GREEN}> PACKAGE NAME TO INSTALL: ${MAGENTA}"
-                read package_name
-                if [ -z "$package_name" ]; then continue; fi
-                
-                echo -e "${GREEN}> INSTALLING $package_name. PASSWORD REQUIRED.${NC}"
-                case $pkg_mgr in
-                    apt) sudo apt install "$package_name" -y ;;
-                    dnf) sudo dnf install "$package_name" -y ;;
-                    pacman) sudo pacman -S "$package_name" --noconfirm ;;
-                esac
-                echo -e "${GREEN}> INSTALLATION COMPLETE. PRESS ANY KEY...${NC}"
-                read -n 1
-                ;;
-            0)
-                break
-                ;;
-            *)
-                echo -e "${MAGENTA}> INVALID OPTION.${NC}"
-                sleep 1
-                ;;
-        esac
+    local COLORS=(
+        "${MAGENTA}%s${NC}"
+        "${MAGENTA}       ${GREEN}%s${MAGENTA}${NC}"
+        "${MAGENTA}%s${NC}"
+        "${MAGENTA}[1] ${GREEN}> BROWSE THE WEB ${MAGENTA}(W3M)${NC}"
+        "${MAGENTA}[2] ${GREEN}> CODE ${MAGENTA}(VIM)${NC}"
+        "${MAGENTA}[3] ${GREEN}> START GRAPHICAL INTERFACE ${MAGENTA}(GUI)${NC}"
+        "${MAGENTA}[4] ${GREEN}> SHUTDOWN ${MAGENTA}(POWEROFF)${NC}"
+        "${MAGENTA}[5] ${GREEN}> RESTART ${MAGENTA}(REBOOT)${NC}"
+        "${MAGENTA}[6] ${GREEN}> CONTINUE TO TERMINAL INTERFACE ${MAGENTA}(TUI)${NC}"
+    )
+
+    for i in "${!RAW_MENU[@]}"; do
+        printf "%*s" $PADDING ""
+        if (( i < 3 )); then
+            printf "${COLORS[i]}\n" "${RAW_MENU[i]}"
+        else
+            echo -e "${COLORS[i]}"
+        fi
     done
-    clear
 }
 
 clear
@@ -148,30 +102,27 @@ type_line "> CONNECTION ESTABLISHED" 1
 type_line "> WELCOME, $USER" 1
 
 while true; do
+    clear 
     echo -e "${NC}" 
-    echo -e "${MAGENTA}========================================"
-    echo -e "       ${GREEN}AVAILABLE PROTOCOLS${MAGENTA}"
-    echo -e "========================================"
-    echo -e "${MAGENTA}[1] ${GREEN}> BROWSE THE WEB ${MAGENTA}(W3M)"
-    echo -e "${MAGENTA}[2] ${GREEN}> CODE ${MAGENTA}(VIM)"
-    echo -e "${MAGENTA}[3] ${GREEN}> START GRAPHICAL INTERFACE ${MAGENTA}(GUI)"
-    echo -e "${MAGENTA}[4] ${GREEN}> SHUTDOWN ${MAGENTA}(POWEROFF)"
-    echo -e "${MAGENTA}[5] ${GREEN}> RESTART ${MAGENTA}(REBOOT)"
-    echo -e "${MAGENTA}[6] ${GREEN}> SYSTEM STATUS ${MAGENTA}(INFO)"
-    echo -e "${MAGENTA}[7] ${GREEN}> PACKAGE MANAGER ${MAGENTA}(PKG)"
-    echo -e "${MAGENTA}========================================"
-    
+    print_menu_block
+
+    ROWS=$(tput lines)
+    TARGET_ROW=$(( ROWS - 6))
+    tput cup $TARGET_ROW 0
     echo -ne "${GREEN}> SELECT OPTION >> ${MAGENTA}"
     read choice
+    tput cuu 1
 
     case $choice in
         1)
             echo -e "${GREEN}> INITIALIZING BROWSER...${NC}"
             w3m viztini.github.io
+            clear
             ;;
         2)
             echo -e "${GREEN}> OPENING EDITOR...${NC}"
             vim
+            clear
             ;;
         3)
             echo -e "${GREEN}> LAUNCHING VISUAL INTERFACE...${NC}"
@@ -193,10 +144,13 @@ while true; do
             exit 0
             ;;
         6)
-            show_system_status
-            ;;
-        7)
-            package_menu
+            clear
+            if command -v neofetch &> /dev/null; then
+                neofetch
+            else
+                echo -e "${MAGENTA}> Neofetch not found.${NC}"
+            fi
+            exec $SHELL
             ;;
         *)
             echo -e "${MAGENTA}> INVALID INPUT. RETRYING...${NC}"
