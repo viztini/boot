@@ -6,7 +6,7 @@ inspired by lain and gentoo
 
 # dependencies
 
-neofetch, gnome and genact
+neofetch, vim, w3m, gnome and genact
 
 # notes
 
